@@ -1,19 +1,13 @@
 from fastapi import FastAPI
-from routers import users # Підключаємо наш файл з папки routers
+from routers import users 
 
-app = FastAPI(title="Subscription Manager API")
-
-# Реєструємо маршрути користувачів у головному додатку
-app.include_router(users.router)
-
-@app.get("/")
-def root():
-    return {"message": "Бекенд успішно запущено!"}
-
-# Створюємо екземпляр нашого додатку
+# Створюємо єдиний екземпляр додатку (назва від команди)
 app = FastAPI(title="Kolo API")
 
-# Створюємо базовий маршрут (кореневу адресу "/")
+# Підключаємо твої роути (реєстрація та логін)
+app.include_router(users.router)
+
+# Базовий маршрут, щоб перевіряти, чи сервер живий
 @app.get("/")
 def read_root():
-    return {"message": "Kolo API is running"}
+    return {"message": "Kolo API is running. Бекенд успішно запущено!"}
