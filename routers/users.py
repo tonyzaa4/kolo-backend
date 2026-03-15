@@ -1,14 +1,33 @@
 from fastapi import APIRouter
+from pydantic import BaseModel
 
-router = APIRouter(
-    prefix="/users",
-    tags=["Users"]
-)
+# Додаємо префікс /api/users, щоб ідеально відповідати завданню в Jira
+router = APIRouter(prefix="/api/users", tags=["Users"])
 
-@router.get("/")
-def get_users():
-    return {"message": "Тут буде список користувачів для нашого менеджера підписок"}
+# 1. Створюємо моделі для прийому JSON
+class UserRegister(BaseModel):
+    email: str
+    password: str
 
-@router.get("/{user_id}")
-def get_user_profile(user_id: int):
-    return {"message": f"Профіль користувача з ID: {user_id}"}
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+# 2. Пишемо наші Mocks (заглушки)
+@router.post("/register")
+def register_user(user: UserRegister):
+    # Тут поки немає бази даних, тому просто повертаємо успіх
+    return {
+        "message": "Користувач успішно зареєстрований (Mock)", 
+        "email": user.email
+    }
+
+@router.post("/login")
+def login_user(user: UserLogin):
+    # Повертаємо фейковий токен, як просять у завданні
+    return {
+        "token": "12345abcde", 
+        "message": "Успішний вхід (Mock)"
+    }
+
+# Твої попередні GET-роути можуть залишатися нижче...
