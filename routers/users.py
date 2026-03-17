@@ -1,10 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
-# Додаємо префікс /api/users, щоб ідеально відповідати завданню в Jira
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
-# 1. Створюємо моделі для прийому JSON
+# Ця магічна змінна каже FastAPI: "Ці маршрути захищені токеном!"
+# Вона також автоматично додасть кнопку "Authorize" (замочок) у твою документацію
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
+
+# --- Твої старі моделі ---
 class UserRegister(BaseModel):
     email: str
     password: str
@@ -13,21 +17,32 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
-# 2. Пишемо наші Mocks (заглушки)
+# --- НОВА МОДЕЛЬ ДЛЯ НАЛАШТУВАНЬ (SCRUM-24) ---
+class UserPreferences(BaseModel):
+    theme: str = "dark"
+    email_notifications: bool = True
+    language: str = "uk"
+
+# --- Твої старі роути ---
 @router.post("/register")
 def register_user(user: UserRegister):
-    # Тут поки немає бази даних, тому просто повертаємо успіх
-    return {
-        "message": "Користувач успішно зареєстрований (Mock)", 
-        "email": user.email
-    }
+    return {"message": "Користувач успішно зареєстрований (Mock)", "email": user.email}
 
 @router.post("/login")
-def login_user(user: UserLogin):
-    # Повертаємо фейковий токен, як просять у завданні
+def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
+    # Тепер ми приймаємо стандартну форму від замочка Swagger
+    # Swagger вимагає, щоб ключ називався строго "access_token"
     return {
-        "token": "12345abcde", 
-        "message": "Успішний вхід (Mock)"
+        "access_token": "12345abcde", 
+        "token_type": "bearer"
     }
-
-# Твої попередні GET-роути можуть залишатися нижче...
+# --- НОВИЙ РОУТ /me (SCRUM-24) ---
+@router.get("/me", response_model=UserPreferences)
+def get_user_profile(token: str = Depends(oauth2_scheme)):
+    # Завдяки Depends(oauth2_scheme) сервер не пустить сюди без токена.
+    # Оскільки бази даних ще немає, повертаємо фейкові налаштування.
+    return UserPreferences(
+        theme="dark",
+        email_notifications=True,
+        language="uk"
+    )
