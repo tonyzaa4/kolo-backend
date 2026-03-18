@@ -4,58 +4,57 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
-# Ця магічна змінна каже FastAPI: "Ці маршрути захищені токеном!"
-# Вона також автоматично додасть кнопку "Authorize" (замочок) у твою документацію
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
 
-# --- Твої старі моделі ---
+# --- МОДЕЛІ ---
 class UserRegister(BaseModel):
     email: str
     password: str
 
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
-# --- НОВА МОДЕЛЬ ДЛЯ НАЛАШТУВАНЬ (SCRUM-24) ---
 class UserPreferences(BaseModel):
     theme: str = "dark"
     email_notifications: bool = True
     language: str = "uk"
 
-# --- Твої старі роути ---
-@router.post("/register")
+# --- МАРШРУТИ З ПРОФЕСІЙНОЮ ДОКУМЕНТАЦІЄЮ ---
+
+@router.post(
+    "/register", 
+    summary="Реєстрація нового користувача", 
+    description="Створює новий обліковий запис у системі. Приймає **email** та **пароль**. Повертає повідомлення про успішну реєстрацію (наразі працює як заглушка)."
+)
 def register_user(user: UserRegister):
     return {"message": "Користувач успішно зареєстрований (Mock)", "email": user.email}
 
-@router.post("/login")
+
+@router.post(
+    "/login", 
+    summary="Вхід в систему (Отримання токена)", 
+    description="Авторизація користувача. Використовує стандартну форму OAuth2 (приймає `username` та `password`). Повертає **JWT токен** доступу, який необхідний для роботи із захищеними маршрутами."
+)
 def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
-    # Тепер ми приймаємо стандартну форму від замочка Swagger
-    # Swagger вимагає, щоб ключ називався строго "access_token"
-    return {
-        "access_token": "12345abcde", 
-        "token_type": "bearer"
-    }
-# --- НОВИЙ РОУТ /me (SCRUM-24) ---
-@router.get("/me", response_model=UserPreferences)
+    return {"access_token": "12345abcde", "token_type": "bearer"}
+
+
+@router.get(
+    "/me", 
+    response_model=UserPreferences,
+    summary="Отримати налаштування профілю", 
+    description="Повертає поточні налаштування авторизованого користувача (тема оформлення, мова, статус email-сповіщень). **Вимагає передачі Bearer токена**."
+)
 def get_user_profile(token: str = Depends(oauth2_scheme)):
-    # Завдяки Depends(oauth2_scheme) сервер не пустить сюди без токена.
-    # Оскільки бази даних ще немає, повертаємо фейкові налаштування.
     return UserPreferences(
         theme="dark",
         email_notifications=True,
         language="uk"
     )
-# --- НОВИЙ РОУТ ДЛЯ ОНОВЛЕННЯ ПРОФІЛЮ (SCRUM-25) ---
-@router.put("/me", response_model=UserPreferences)
+
+
+@router.put(
+    "/me", 
+    response_model=UserPreferences,
+    summary="Оновити налаштування профілю", 
+    description="Дозволяє користувачу змінити свої особисті налаштування. Приймає JSON з новими даними та повертає оновлений об'єкт налаштувань. **Вимагає передачі Bearer токена**."
+)
 def update_user_profile(preferences: UserPreferences, token: str = Depends(oauth2_scheme)):
-    # Завдяки Depends(oauth2_scheme) ми перевіряємо, чи є у користувача токен (замочок).
-    # А завдяки preferences: UserPreferences FastAPI автоматично вимагатиме JSON з налаштуваннями.
-    
-    # В майбутньому тут буде код для збереження в базу даних, наприклад:
-    # user_id = decode_token(token)
-    # db.update_preferences(user_id, preferences)
-    
-    # Поки бази немає, ми просто повертаємо ті самі дані назад, 
-    # імітуючи, що ми їх успішно зберегли.
     return preferences
