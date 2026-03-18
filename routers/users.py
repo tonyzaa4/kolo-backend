@@ -46,3 +46,16 @@ def get_user_profile(token: str = Depends(oauth2_scheme)):
         email_notifications=True,
         language="uk"
     )
+# --- НОВИЙ РОУТ ДЛЯ ОНОВЛЕННЯ ПРОФІЛЮ (SCRUM-25) ---
+@router.put("/me", response_model=UserPreferences)
+def update_user_profile(preferences: UserPreferences, token: str = Depends(oauth2_scheme)):
+    # Завдяки Depends(oauth2_scheme) ми перевіряємо, чи є у користувача токен (замочок).
+    # А завдяки preferences: UserPreferences FastAPI автоматично вимагатиме JSON з налаштуваннями.
+    
+    # В майбутньому тут буде код для збереження в базу даних, наприклад:
+    # user_id = decode_token(token)
+    # db.update_preferences(user_id, preferences)
+    
+    # Поки бази немає, ми просто повертаємо ті самі дані назад, 
+    # імітуючи, що ми їх успішно зберегли.
+    return preferences
