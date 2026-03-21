@@ -1,19 +1,22 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-
 from routers import users
 from database import engine
 import models
 from logger import setup_logging
 
-setup_logging()
-
-# Імпорт хендлерів
+# Імпорт хендлерів Тані
 from app.exceptions import (
     http_exception_handler,
     not_found_handler,
     validation_exception_handler
 )
+
+# Запускаємо логування
+setup_logging()
+
+# Створюємо таблиці, якщо їх немає (про всяк випадок)
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Kolo API")
 
