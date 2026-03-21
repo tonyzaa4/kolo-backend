@@ -1,33 +1,53 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+import models, schemas, utils
+from database import get_db
 
-# Додаємо префікс /api/users, щоб ідеально відповідати завданню в Jira
-router = APIRouter(prefix="/api/users", tags=["Users"])
+# Використовуємо префікс, який просить команда в Jira
+router = APIRouter(
+    prefix="/api/users",
+    tags=["Users"]
+)
 
-# 1. Створюємо моделі для прийому JSON
-class UserRegister(BaseModel):
-    email: str
-    password: str
 
-class UserLogin(BaseModel):
-    email: str
-    password: str
+# --- Твоя реальна реєстрація (Завдання Тетяни) ---
+@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
+def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """
+    Реальна реєстрація користувача в MySQL:
+    1. Перевірка email.
+    2. Хешування пароля через utils.py.
+    3. Збереження в базу через SQLAlchemy.
+    """
+    # Перевірка, чи існує користувач
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Цей email вже зареєстровано"
+        )
 
-# 2. Пишемо наші Mocks (заглушки)
-@router.post("/register")
-def register_user(user: UserRegister):
-    # Тут поки немає бази даних, тому просто повертаємо успіх
-    return {
-        "message": "Користувач успішно зареєстрований (Mock)", 
-        "email": user.email
-    }
+    # Хешування пароля (це те, що ми робили в utils.py)
+    hashed_password = utils.hash_password(user.password)
 
+    # Створення запису
+    new_user = models.User(email=user.email, hashed_password=hashed_password)
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
+
+
+# --- Заглушка для входу (Тут буде працювати Влад) ---
 @router.post("/login")
-def login_user(user: UserLogin):
-    # Повертаємо фейковий токен, як просять у завданні
+def login_user(user: schemas.UserCreate):  # Тимчасово використовуємо ту саму схему
+    """
+    Цей ендпоінт поки що є заглушкою (Mock).
+    Влад додасть сюди логіку перевірки пароля та JWT-токени.
+    """
     return {
-        "token": "12345abcde", 
-        "message": "Успішний вхід (Mock)"
+        "token": "12345abcde-mock-token",
+        "message": "Успішний вхід (Заглушка для розробки мобілки)"
     }
-
-# Твої попередні GET-роути можуть залишатися нижче...
