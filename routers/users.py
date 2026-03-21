@@ -1,25 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-import models, schemas, utils
+from pydantic import BaseModel
+
+# Імпортуємо наші модулі
+import models
+import schemas
+import utils
 from database import get_db
 
-# Використовуємо префікс, який просить команда в Jira
-router = APIRouter(
-    prefix="/api/users",
-    tags=["Users"]
+# 1. Налаштування роутера
+router = APIRouter(prefix="/api/users", tags=["Users"])
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
+
+
+# 2. Додаткові моделі для профілю (те, що було у твоєму коді)
+class UserPreferences(BaseModel):
+    theme: str = "dark"
+    email_notifications: bool = True
+    language: str = "uk"
+
+
+# --- МАРШРУТИ ---
+
+@router.post(
+    "/register",
+    status_code=status.HTTP_201_CREATED,
+    response_model=schemas.UserOut,
+    summary="Реєстрація нового користувача",
+    description="Перевіряє email, хешує пароль та зберігає користувача в MySQL."
 )
-
-
-# --- Твоя реальна реєстрація (Завдання Тетяни) ---
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """
-    Реальна реєстрація користувача в MySQL:
-    1. Перевірка email.
-    2. Хешування пароля через utils.py.
-    3. Збереження в базу через SQLAlchemy.
-    """
-    # Перевірка, чи існує користувач
+    # Перевірка на дублікат
     existing_user = db.query(models.User).filter(models.User.email == user.email).first()
     if existing_user:
         raise HTTPException(
@@ -27,7 +39,7 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             detail="Цей email вже зареєстровано"
         )
 
-    # Хешування пароля (це те, що ми робили в utils.py)
+    # Хешування пароля (всередині функції!)
     hashed_password = utils.hash_password(user.password)
 
     # Створення запису
@@ -40,14 +52,31 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-# --- Заглушка для входу (Тут буде працювати Влад) ---
-@router.post("/login")
-def login_user(user: schemas.UserCreate):  # Тимчасово використовуємо ту саму схему
-    """
-    Цей ендпоінт поки що є заглушкою (Mock).
-    Влад додасть сюди логіку перевірки пароля та JWT-токени.
-    """
-    return {
-        "token": "12345abcde-mock-token",
-        "message": "Успішний вхід (Заглушка для розробки мобілки)"
-    }
+@router.post(
+    "/login",
+    summary="Вхід в систему (Отримання токена)",
+    description="Авторизація через форму OAuth2. Повертає тимчасовий токен (Mock)."
+)
+def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Тут пізніше Влад додасть реальну перевірку пароля
+    return {"access_token": "12345abcde-mock", "token_type": "bearer"}
+
+
+@router.get(
+    "/me",
+    response_model=UserPreferences,
+    summary="Отримати налаштування профілю"
+)
+def get_user_profile(token: str = Depends(oauth2_scheme)):
+    # Повертаємо дефолтні налаштування (заглушка)
+    return UserPreferences()
+
+
+@router.put(
+    "/me",
+    response_model=UserPreferences,
+    summary="Оновити налаштування профілю"
+)
+def update_user_profile(preferences: UserPreferences, token: str = Depends(oauth2_scheme)):
+    # Повертаємо те, що прислав користувач
+    return preferences

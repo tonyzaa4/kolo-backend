@@ -4,7 +4,7 @@ from database import engine
 import models
 
 # Створюємо таблиці, якщо їх немає (про всяк випадок)
-models.Base.metadata.create_all(bind=engine)
+#models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Kolo API")
 
