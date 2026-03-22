@@ -3,6 +3,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Імпортуємо наші модулі
 import models
 import schemas
@@ -80,3 +84,8 @@ def get_user_profile(token: str = Depends(oauth2_scheme)):
 def update_user_profile(preferences: UserPreferences, token: str = Depends(oauth2_scheme)):
     # Повертаємо те, що прислав користувач
     return preferences
+
+
+logger.info("User registered")
+logger.warning("Suspicious request")
+logger.error("Database error")

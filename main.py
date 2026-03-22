@@ -4,6 +4,9 @@ from fastapi.exceptions import RequestValidationError
 from routers import users
 from database import engine
 import models
+from logger import setup_logging
+
+setup_logging()
 
 # Імпорт хендлерів
 from app.exceptions import (

@@ -39,3 +39,15 @@ def get_item(item_id: int):
     if item_id == 0:
         raise HTTPException(status_code=400, detail="Invalid ID")
     return {"item_id": item_id}
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+async def http_exception_handler(request, exc):
+    logger.error(f"{request.method} {request.url} - {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail}
+    )
