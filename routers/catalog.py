@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from routers.users import oauth2_scheme
 
 router = APIRouter(prefix="/api/catalog", tags=["Catalog"])
 
+# --- Ендпоінт 1 (з попередньої таски SCRUM-29) ---
 @router.get(
     "/",
     summary="Отримати каталог з пошуком та фільтрацією",
@@ -20,16 +21,43 @@ def get_catalog(
     db: Session = Depends(get_db),         # Підключення до бази даних
     token: str = Depends(oauth2_scheme)    # Наш фейсконтроль (JWT)
 ):
-    # 1. Починаємо формувати запит до таблиці Subscription
+    # Починаємо формувати запит до таблиці Subscription
     query = db.query(models.Subscription)
 
-    # 2. Якщо передали параметр search, фільтруємо по назві (як просили в тасці)
+    # Якщо передали параметр search, фільтруємо по назві
     if search:
         query = query.filter(models.Subscription.name.contains(search))
 
-    # 3. Якщо передали параметр category, фільтруємо по категорії
+    # Якщо передали параметр category, фільтруємо по категорії
     if category:
         query = query.filter(models.Subscription.category == category)
 
-    # 4. Виконуємо запит і віддаємо результати
+    # Виконуємо запит і віддаємо результати
+    return query.all()
+
+
+# --- Ендпоінт 2 (НОВИЙ, для поточної таски SCRUM-33) ---
+@router.get(
+    "/price-range",
+    summary="Отримати підписки за діапазоном цін",
+    description="Повертає список підписок у заданому діапазоні цін (`min_price` - `max_price`). **Тільки для авторизованих.**"
+)
+def get_subscriptions_by_price(
+    min_price: Optional[float] = None,      # Необов'язкова мінімальна ціна
+    max_price: Optional[float] = None,      # Необов'язкова максимальна ціна
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    query = db.query(models.Subscription)
+
+    # Чітко виконуємо вимогу з таски:
+    # "use models.Subscription.price.between(min_price, max_price) if both are provided"
+    if min_price is not None and max_price is not None:
+        query = query.filter(models.Subscription.price.between(min_price, max_price))
+    # Також корисно додати логіку, якщо передали тільки одну межу (для кращого UX):
+    elif min_price is not None:
+        query = query.filter(models.Subscription.price >= min_price)
+    elif max_price is not None:
+        query = query.filter(models.Subscription.price <= max_price)
+
     return query.all()
