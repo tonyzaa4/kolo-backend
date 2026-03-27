@@ -4,8 +4,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 
 from database import engine
-from routers import users, catalog
+from routers import catalog
 import models
+from routers import users, subscriptions
 
 from app.logger import setup_logging
 from app.exceptions import (
@@ -20,7 +21,6 @@ access_logger = setup_logging()
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Kolo API")
-
 
 @app.middleware("http")
 async def log_catalog_requests(request: Request, call_next):
@@ -51,7 +51,7 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 # Підключаємо роутери
 app.include_router(users.router)
 app.include_router(catalog.router)
-
+app.include_router(subscriptions.router)
 
 @app.get("/")
 def read_root():

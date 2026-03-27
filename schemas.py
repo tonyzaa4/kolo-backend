@@ -1,27 +1,27 @@
-from pydantic import BaseModel, EmailStr
-#from datetime import datetime- закоментувала, бо при розборі коду від поки не потрібен, але можливо в майбутньому буде)
+from pydantic import BaseModel
 from typing import Optional
 
-# 1. Схема для отримання даних ВІД клієнта (при реєстрації)
+# --- СХЕМИ КОРИСТУВАЧІВ ---
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
-# 2. Схема для відправки даних ДО клієнта (Безпечна!)
 class UserOut(BaseModel):
     id: int
-    email: EmailStr
-    # пароля тут немає, тому він ніколи не "витікає" в інтернет
+    email: str
 
-    class SubscriptionOut(BaseModel):
-        id: int
-        name: str
-        category: Optional[str] = None
-        icon_url: Optional[str] = None
-        default_price: float
-        default_currency: str
-        is_custom: bool
+    class Config:
+        from_attributes = True
 
-        class Config:
-            from_attributes = True  # Це дозволяє FastAPI читати дані прямо з бази MySQL
+# --- НОВІ СХЕМИ ДЛЯ КАТАЛОГУ ПІДПИСОК (Спринт 3) ---
+class SubscriptionOut(BaseModel):
+    id: int
+    name: str
+    category: Optional[str] = None
+    icon_url: Optional[str] = None
+    default_price: float
+    default_currency: str
+    is_custom: bool
 
+    class Config:
+        from_attributes = True
