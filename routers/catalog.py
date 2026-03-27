@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 # Імпортуємо модулі для роботи з БД
@@ -9,48 +9,42 @@ from routers.users import oauth2_scheme
 
 router = APIRouter(prefix="/api/catalog", tags=["Catalog"])
 
-# --- Ендпоінт 1 (з попередньої таски SCRUM-29) ---
+# --- Ендпоінт 1: Каталог + Пошук + Категорії (SCRUM-29) ---
 @router.get(
     "/",
     summary="Отримати каталог з пошуком та фільтрацією",
     description="Повертає список підписок. Дозволяє шукати за назвою (`search`) та категорією (`category`). **Тільки для авторизованих.**"
 )
 def get_catalog(
-    search: Optional[str] = None,          # Query-параметр для пошуку
-    category: Optional[str] = None,        # Query-параметр для категорії
-    db: Session = Depends(get_db),         # Підключення до бази даних
-    token: str = Depends(oauth2_scheme)    # Наш фейсконтроль (JWT)
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
 ):
-    # Починаємо формувати запит до таблиці Subscription
     query = db.query(models.Subscription)
 
-    # Якщо передали параметр search, фільтруємо по назві
     if search:
         query = query.filter(models.Subscription.name.contains(search))
-
-    # Якщо передали параметр category, фільтруємо по категорії
     if category:
         query = query.filter(models.Subscription.category == category)
 
-    # Виконуємо запит і віддаємо результати
     return query.all()
 
 
-# --- Ендпоінт 2 (НОВИЙ, для поточної таски SCRUM-33) ---
+# --- Ендпоінт 2: Фільтрація за ціною (SCRUM-33 + фікс default_price) ---
 @router.get(
     "/price-range",
     summary="Отримати підписки за діапазоном цін",
     description="Повертає список підписок у заданому діапазоні цін (`min_price` - `max_price`). **Тільки для авторизованих.**"
 )
 def get_subscriptions_by_price(
-    min_price: Optional[float] = None,      
-    max_price: Optional[float] = None,      
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ):
     query = db.query(models.Subscription)
 
-    # ВИПРАВЛЕНО: замінили price на default_price
     if min_price is not None and max_price is not None:
         query = query.filter(models.Subscription.default_price.between(min_price, max_price))
     elif min_price is not None:
@@ -59,3 +53,22 @@ def get_subscriptions_by_price(
         query = query.filter(models.Subscription.default_price <= max_price)
 
     return query.all()
+
+
+# --- Ендпоінт 3: Деталі однієї підписки (SCRUM-99) ---
+@router.get(
+    "/{subscription_id}",
+    summary="Отримати деталі підписки за ID",
+    description="Повертає всю інформацію про одну конкретну підписку за її ID. Потрібно для екрану деталей в Android. **Тільки для авторизованих.**"
+)
+def get_subscription_by_id(
+    subscription_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    subscription = db.query(models.Subscription).filter(models.Subscription.id == subscription_id).first()
+    
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Підписку не знайдено")
+        
+    return subscription
