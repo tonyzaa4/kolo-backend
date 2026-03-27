@@ -43,21 +43,19 @@ def get_catalog(
     description="Повертає список підписок у заданому діапазоні цін (`min_price` - `max_price`). **Тільки для авторизованих.**"
 )
 def get_subscriptions_by_price(
-    min_price: Optional[float] = None,      # Необов'язкова мінімальна ціна
-    max_price: Optional[float] = None,      # Необов'язкова максимальна ціна
+    min_price: Optional[float] = None,      
+    max_price: Optional[float] = None,      
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ):
     query = db.query(models.Subscription)
 
-    # Чітко виконуємо вимогу з таски:
-    # "use models.Subscription.price.between(min_price, max_price) if both are provided"
+    # ВИПРАВЛЕНО: замінили price на default_price
     if min_price is not None and max_price is not None:
-        query = query.filter(models.Subscription.price.between(min_price, max_price))
-    # Також корисно додати логіку, якщо передали тільки одну межу (для кращого UX):
+        query = query.filter(models.Subscription.default_price.between(min_price, max_price))
     elif min_price is not None:
-        query = query.filter(models.Subscription.price >= min_price)
+        query = query.filter(models.Subscription.default_price >= min_price)
     elif max_price is not None:
-        query = query.filter(models.Subscription.price <= max_price)
+        query = query.filter(models.Subscription.default_price <= max_price)
 
     return query.all()
