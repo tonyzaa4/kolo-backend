@@ -27,10 +27,10 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    category = Column(String(100))
+    name = Column(String(50), index=True, nullable=False)
+    category = Column(String(50))
     icon_url = Column(String(255))
-    default_price = Column(Float)
+    default_price = Column(Float, nullable=False)
     default_currency = Column(String(10), default="USD")
     is_custom = Column(Boolean, default=False)
 
