@@ -3,6 +3,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    # підключення до БД
+    pass
+except Exception as e:
+    logger.error(f"DB connection failed: {e}")
+
+
+
 # Завантажуємо змінні середовища з файлу .env
 load_dotenv()
 
