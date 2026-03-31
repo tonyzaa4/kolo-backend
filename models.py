@@ -40,14 +40,14 @@ class UserSubscription(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # Зв'язок з глобальною підпискою (може бути пустим, якщо користувач створив свою)
     subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=True)
-    custom_name = Column(String(100), nullable=True) # Назва для власної підписки
-    start_date = Column(Date)
-    price = Column(Float)
-    currency = Column(String(10), default="USD")
-    billing_cycle = Column(Enum(BillingCycle), default=BillingCycle.monthly)
-    status = Column(String(50), default="active") # active, paused, cancelled
+
+    custom_name = Column(String(100), nullable=True)
+    start_date = Column(Date, nullable=True)
+    price = Column(Float, nullable=True)
+    currency = Column(String(10), nullable=True)
+    billing_cycle = Column(String(50), nullable=True) # В базі це ENUM, String чудово з ним працює
+    status = Column(String(50), default="active")
 
     # Відношення
     owner = relationship("User", back_populates="subscriptions")
