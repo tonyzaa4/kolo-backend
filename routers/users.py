@@ -2,78 +2,95 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-import logging
 
-from database import get_db
 import models
 import schemas
 import utils
+from database import get_db
 
-# --- Logger ---
-logger = logging.getLogger(__name__)
-
-# --- Роутер ---
 router = APIRouter(prefix="/api/users", tags=["Users"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
 
 
-# --- Модель профілю ---
 class UserPreferences(BaseModel):
     theme: str = "dark"
     email_notifications: bool = True
     language: str = "uk"
 
 
-# --- Реєстрація користувача ---
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+def create_access_token(user: models.User) -> str:
+    return f"user-{user.id}"
+
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
+    if not token.startswith("user-"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    try:
+        user_id = int(token.split("-", 1)[1])
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
     response_model=schemas.UserOut,
-    summary="Реєстрація нового користувача"
+    summary="Реєстрація нового користувача",
+    description="Створює новий обліковий запис у системі. Перевіряє email на дублікати, хешує пароль та зберігає користувача в базі даних."
 )
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    try:
-        existing_user = db.query(models.User).filter(models.User.email == user.email).first()
-        if existing_user:
-            logger.warning(f"Registration attempt with existing email: {user.email}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Цей email вже зареєстровано"
-            )
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Цей email вже зареєстровано")
 
-        hashed_password = utils.hash_password(user.password)
-        new_user = models.User(email=user.email, hashed_password=hashed_password)
-
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-
-        logger.info(f"New user registered: {new_user.email}")
-        return new_user
-
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Database error during registration: {e}")
-        raise HTTPException(status_code=500, detail="Database error")
+    hashed_password = utils.hash_password(user.password)
+    new_user = models.User(email=user.email, hashed_password=hashed_password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 
-# --- Вхід користувача ---
-@router.post("/login", summary="Вхід в систему (отримання токена)")
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Вхід в систему (Отримання токена)",
+    description="Авторизація користувача. Перевіряє email/пароль і повертає bearer token."
+)
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    logger.info(f"Login attempt for email: {form_data.username}")
-    # Тут поки mock токен
-    return {"access_token": "12345abcde-mock", "token_type": "bearer"}
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not utils.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Невірний email або пароль")
+
+    return TokenResponse(access_token=create_access_token(user))
 
 
-# --- Отримати налаштування профілю ---
-@router.get("/me", response_model=UserPreferences, summary="Отримати налаштування профілю")
-def get_user_profile(token: str = Depends(oauth2_scheme)):
-    logger.info("Profile viewed")
+@router.get(
+    "/me",
+    response_model=UserPreferences,
+    summary="Отримати налаштування профілю",
+    description="Повертає поточні налаштування авторизованого користувача."
+)
+def get_user_profile(current_user: models.User = Depends(get_current_user)):
     return UserPreferences()
 
 
-# --- Оновити налаштування профілю ---
-@router.put("/me", response_model=UserPreferences, summary="Оновити налаштування профілю")
-def update_user_profile(preferences: UserPreferences, token: str = Depends(oauth2_scheme)):
-    logger.info(f"Profile updated: {preferences.dict()}")
+@router.put(
+    "/me",
+    response_model=UserPreferences,
+    summary="Оновити налаштування профілю",
+    description="Дозволяє користувачу змінити свої особисті налаштування."
+)
+def update_user_profile(preferences: UserPreferences, current_user: models.User = Depends(get_current_user)):
     return preferences
