@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from typing import Optional
 
 import models
 import schemas
@@ -118,27 +119,46 @@ def get_my_subscriptions(
     "/me/subscriptions",
     status_code=status.HTTP_201_CREATED,
     summary="Додати підписку до профілю",
-    description="Прив'язує існуючий сервіс з каталогу до поточного авторизованого користувача, копіюючи базову ціну та валюту."
+    description="Додає існуючий сервіс з каталогу АБО створює кастомну підписку, якщо subscription_id не передано."
 )
 def add_subscription(
-    subscription_id: int, 
+    subscription_id: Optional[int] = None, 
+    custom_name: Optional[str] = None,
+    custom_price: Optional[float] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # 1. Перевіряємо, чи існує такий сервіс у глобальному каталозі
-    catalog_item = db.query(models.Subscription).filter(models.Subscription.id == subscription_id).first()
-    if not catalog_item:
-        raise HTTPException(status_code=404, detail="Сервіс не знайдено в каталозі")
+    # Сценарій 1: КАСТОМНА ПІДПИСКА (subscription_id не передали)
+    if subscription_id is None:
+        # Перевіряємо, чи користувач хоча б ввів назву та ціну
+        if not custom_name or custom_price is None:
+            raise HTTPException(
+                status_code=400, 
+                detail="Для створення власної підписки необхідно вказати custom_name та custom_price"
+            )
+        
+        new_user_sub = models.UserSubscription(
+            user_id=current_user.id,
+            custom_name=custom_name,
+            price=custom_price,
+            currency="UAH"  # Можемо поставити гривню за замовчуванням для кастомних
+        )
 
-    # 2. Створюємо особисту підписку користувача, одразу підтягуючи дефолтні значення
-    new_user_sub = models.UserSubscription(
-        user_id=current_user.id,
-        subscription_id=catalog_item.id,
-        custom_name=catalog_item.name,             # Називаємо так само (напр., Netflix)
-        price=catalog_item.default_price,          # Беремо базову ціну
-        currency=catalog_item.default_currency     # Беремо базову валюту
-    )
+    # Сценарій 2: ПІДПИСКА З КАТАЛОГУ (subscription_id є)
+    else:
+        catalog_item = db.query(models.Subscription).filter(models.Subscription.id == subscription_id).first()
+        if not catalog_item:
+            raise HTTPException(status_code=404, detail="Сервіс не знайдено в каталозі")
+
+        new_user_sub = models.UserSubscription(
+            user_id=current_user.id,
+            subscription_id=catalog_item.id,
+            custom_name=catalog_item.name,
+            price=catalog_item.default_price,
+            currency=catalog_item.default_currency
+        )
     
+    # Зберігаємо результат у базу (однаково для обох сценаріїв)
     db.add(new_user_sub)
     db.commit()
     db.refresh(new_user_sub)
