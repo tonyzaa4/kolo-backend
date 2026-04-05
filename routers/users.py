@@ -114,3 +114,33 @@ def get_my_subscriptions(
     
     # Тимчасова заглушка, щоб сервер не падав, якщо таблиці ще немає
     return []
+@router.post(
+    "/me/subscriptions",
+    status_code=status.HTTP_201_CREATED,
+    summary="Додати підписку до профілю",
+    description="Прив'язує існуючий сервіс з каталогу до поточного авторизованого користувача, копіюючи базову ціну та валюту."
+)
+def add_subscription(
+    subscription_id: int, 
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # 1. Перевіряємо, чи існує такий сервіс у глобальному каталозі
+    catalog_item = db.query(models.Subscription).filter(models.Subscription.id == subscription_id).first()
+    if not catalog_item:
+        raise HTTPException(status_code=404, detail="Сервіс не знайдено в каталозі")
+
+    # 2. Створюємо особисту підписку користувача, одразу підтягуючи дефолтні значення
+    new_user_sub = models.UserSubscription(
+        user_id=current_user.id,
+        subscription_id=catalog_item.id,
+        custom_name=catalog_item.name,             # Називаємо так само (напр., Netflix)
+        price=catalog_item.default_price,          # Беремо базову ціну
+        currency=catalog_item.default_currency     # Беремо базову валюту
+    )
+    
+    db.add(new_user_sub)
+    db.commit()
+    db.refresh(new_user_sub)
+    
+    return new_user_sub
