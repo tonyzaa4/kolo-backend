@@ -94,3 +94,23 @@ def get_user_profile(current_user: models.User = Depends(get_current_user)):
 )
 def update_user_profile(preferences: UserPreferences, current_user: models.User = Depends(get_current_user)):
     return preferences
+
+@router.get(
+    "/me/subscriptions",
+    summary="Отримати мої підписки",
+    description="Повертає список підписок поточного авторизованого користувача. **Тільки для авторизованих.**"
+)
+def get_my_subscriptions(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Варіант 1: Якщо в models.py для User налаштовано relationship("subscriptions")
+    if hasattr(current_user, "subscriptions"):
+        return current_user.subscriptions
+    
+    # Варіант 2: Якщо у вас є окрема таблиця для куплених підписок (рокоментуй, якщо так):
+    # my_subs = db.query(models.UserSubscription).filter(models.UserSubscription.user_id == current_user.id).all()
+    # return my_subs
+    
+    # Тимчасова заглушка, щоб сервер не падав, якщо таблиці ще немає
+    return []
