@@ -4,7 +4,6 @@ from database import SessionLocal, engine
 import models
 import utils
 
-
 # Створюємо таблиці, якщо їх ще немає
 models.Base.metadata.create_all(bind=engine)
 
@@ -13,8 +12,6 @@ def seed_database():
     session = SessionLocal()
     fake = Faker()
 
-    NUM_USERS = 10
-    users_added = 0
     try:
         users_by_email = {}
 
@@ -24,19 +21,7 @@ def seed_database():
             {"email": "demo@example.com", "password": "password123"},
         ]
 
-    # Перевірка, чи є вже користувачі
-    if session.query(models.User).count() == 0:
-        print("Додаємо фейкових користувачів...")
-        for _ in range(NUM_USERS):
-            raw_password = fake.password(length=10)
-            hashed_pwd = utils.hash_password(raw_password)
-
-            user = models.User(
-                email=fake.unique.email(),
-                hashed_password=hashed_pwd
-            )
-            session.add(user)
-            users_added += 1
+        # 1. Створення користувачів
         for item in predefined_users:
             user = session.query(models.User).filter(models.User.email == item["email"]).first()
             if not user:
@@ -55,15 +40,7 @@ def seed_database():
             )
             session.add(user)
 
-        session.commit()
-        print(f"✅ {users_added} фейкових користувачів успішно додано!")
-    else:
-        print("Користувачі вже існують. Пропускаємо.")
-
-
-    # Перевіряємо, чи база вже не заповнена підписками
-    if session.query(models.Subscription).count() == 0:
-        print("Додаємо базові підписки...")
+        # 2. Створення каталогу підписок
         services = [
             {"name": "Netflix", "category": "Entertainment", "default_price": 14.99, "default_currency": "USD",
              "icon_url": "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg",
@@ -85,21 +62,23 @@ def seed_database():
              "icon_url": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Amazon_logo_%282000%29.svg",
              "is_custom": False},
             {"name": "Disney+", "category": "Entertainment", "default_price": 7.99, "default_currency": "USD",
-             "icon_url": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg", "is_custom": False}
+             "icon_url": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg", "is_custom": False},
         ]
 
-        for s in services:
-            new_sub = models.Subscription(**s)
-            session.add(new_sub)
+        existing_sub_names = {sub.name for sub in session.query(models.Subscription).all()}
+        for service in services:
+            if service["name"] not in existing_sub_names:
+                session.add(models.Subscription(**service))
 
         session.commit()
-        print(f"✅ Успішно додано {len(services)} базових підписок!")
-    else:
-        print("Підписки вже існують. Пропускаємо.")
 
-    # --- Закриваємо сесію ---
-    session.close()
-        def ensure_user_subscription(user_id, subscription_id=None, custom_name=None, price=None, currency=None, billing_cycle="monthly"):
+        # 3. Ось ці змінні ти загубила минулого разу! Дістаємо дані для прив'язки
+        catalog_subs = session.query(models.Subscription).filter(models.Subscription.is_custom == False).all()
+        user_one = session.query(models.User).filter(models.User.email == "testuser1@example.com").first()
+        user_two = session.query(models.User).filter(models.User.email == "testuser2@example.com").first()
+
+        def ensure_user_subscription(user_id, subscription_id=None, custom_name=None, price=None, currency=None,
+                                     billing_cycle="monthly"):
             exists_query = session.query(models.UserSubscription).filter(models.UserSubscription.user_id == user_id)
             if subscription_id is not None:
                 exists_query = exists_query.filter(models.UserSubscription.subscription_id == subscription_id)
@@ -119,23 +98,28 @@ def seed_database():
                 status="active",
             ))
 
+        # 4. Прив'язуємо підписки до тестових юзерів
         if user_one and len(catalog_subs) >= 2:
-            ensure_user_subscription(user_one.id, subscription_id=catalog_subs[0].id, price=catalog_subs[0].default_price, currency=catalog_subs[0].default_currency)
-            ensure_user_subscription(user_one.id, subscription_id=catalog_subs[1].id, price=catalog_subs[1].default_price, currency=catalog_subs[1].default_currency)
+            ensure_user_subscription(user_one.id, subscription_id=catalog_subs[0].id,
+                                     price=catalog_subs[0].default_price, currency=catalog_subs[0].default_currency)
+            ensure_user_subscription(user_one.id, subscription_id=catalog_subs[1].id,
+                                     price=catalog_subs[1].default_price, currency=catalog_subs[1].default_currency)
             ensure_user_subscription(user_one.id, custom_name="Gym Membership", price=25.0, currency="USD")
 
         if user_two and len(catalog_subs) >= 4:
-            ensure_user_subscription(user_two.id, subscription_id=catalog_subs[2].id, price=catalog_subs[2].default_price, currency=catalog_subs[2].default_currency)
-            ensure_user_subscription(user_two.id, subscription_id=catalog_subs[3].id, price=catalog_subs[3].default_price, currency=catalog_subs[3].default_currency)
+            ensure_user_subscription(user_two.id, subscription_id=catalog_subs[2].id,
+                                     price=catalog_subs[2].default_price, currency=catalog_subs[2].default_currency)
+            ensure_user_subscription(user_two.id, subscription_id=catalog_subs[3].id,
+                                     price=catalog_subs[3].default_price, currency=catalog_subs[3].default_currency)
             ensure_user_subscription(user_two.id, custom_name="Local Cinema Club", price=12.0, currency="USD")
 
         session.commit()
         print("✅ Seed завершено: користувачі, каталог та тестові прив'язки підписок створені.")
+
     finally:
+        # Тепер закриття сесії стоїть там, де треба — у самому кінці!
         session.close()
 
 
 if __name__ == "__main__":
     seed_database()
-
-

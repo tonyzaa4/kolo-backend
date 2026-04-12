@@ -67,3 +67,12 @@ class UserPreference(Base):
 
     # Відношення
     user = relationship("User", back_populates="preferences")
+
+# Спринт 5
+# Таблиця курсу валют
+class ExchangeRate(Base):
+    __tablename__ = "exchange_rate"
+
+    id = Column(Integer, primary_key=True, index=True)
+    currency = Column(String(10), unique=True, nullable=False) # "USD", "EUR"
+    rate_to_uah = Column(Float, nullable=False)
