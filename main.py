@@ -1,4 +1,6 @@
 import time
+from apscheduler.schedulers.background import BackgroundScheduler
+from currency_updater import fetch_and_save_rates
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -19,6 +21,16 @@ from app.exceptions import (
 access_logger = setup_logging()
 
 models.Base.metadata.create_all(bind=engine)
+@app.on_event("startup")
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    
+    fetch_and_save_rates()
+    
+    scheduler.add_job(fetch_and_save_rates, 'cron', hour=0, minute=0)
+    
+    scheduler.start()
+    print("⏰ Фоновий планувальник запущено! Курси валют оновлюватимуться щодня.")
 
 app = FastAPI(title="Kolo API")
 
