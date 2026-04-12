@@ -64,6 +64,9 @@ class UserPreference(Base):
     notify_email = Column(Boolean, default=True)
     notify_push = Column(Boolean, default=False)
     remind_days_before = Column(Integer, default=3)
+    
+    # НОВЕ ПОЛЕ:
+    preferred_currency = Column(String(10), default="UAH")
 
     # Відношення
     user = relationship("User", back_populates="preferences")

@@ -7,9 +7,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 
 from database import engine
-from routers import catalog
+
 import models
-from routers import users, subscriptions
+
 
 from app.logger import setup_logging
 from app.exceptions import (
