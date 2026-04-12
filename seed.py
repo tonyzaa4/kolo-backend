@@ -1,7 +1,9 @@
+from datetime import date, timedelta
 from faker import Faker
 from database import SessionLocal, engine
 import models
 import utils
+
 
 # Створюємо таблиці, якщо їх ще немає
 models.Base.metadata.create_all(bind=engine)
@@ -13,6 +15,14 @@ def seed_database():
 
     NUM_USERS = 10
     users_added = 0
+    try:
+        users_by_email = {}
+
+        predefined_users = [
+            {"email": "testuser1@example.com", "password": "password123"},
+            {"email": "testuser2@example.com", "password": "password123"},
+            {"email": "demo@example.com", "password": "password123"},
+        ]
 
     # Перевірка, чи є вже користувачі
     if session.query(models.User).count() == 0:
@@ -27,6 +37,23 @@ def seed_database():
             )
             session.add(user)
             users_added += 1
+        for item in predefined_users:
+            user = session.query(models.User).filter(models.User.email == item["email"]).first()
+            if not user:
+                user = models.User(
+                    email=item["email"],
+                    hashed_password=utils.hash_password(item["password"]),
+                )
+                session.add(user)
+                session.flush()
+            users_by_email[item["email"]] = user
+
+        while session.query(models.User).count() < 10:
+            user = models.User(
+                email=fake.unique.email(),
+                hashed_password=utils.hash_password(fake.password(length=10)),
+            )
+            session.add(user)
 
         session.commit()
         print(f"✅ {users_added} фейкових користувачів успішно додано!")
@@ -72,7 +99,43 @@ def seed_database():
 
     # --- Закриваємо сесію ---
     session.close()
+        def ensure_user_subscription(user_id, subscription_id=None, custom_name=None, price=None, currency=None, billing_cycle="monthly"):
+            exists_query = session.query(models.UserSubscription).filter(models.UserSubscription.user_id == user_id)
+            if subscription_id is not None:
+                exists_query = exists_query.filter(models.UserSubscription.subscription_id == subscription_id)
+            if custom_name is not None:
+                exists_query = exists_query.filter(models.UserSubscription.custom_name == custom_name)
+            if exists_query.first():
+                return
+
+            session.add(models.UserSubscription(
+                user_id=user_id,
+                subscription_id=subscription_id,
+                custom_name=custom_name,
+                start_date=date.today() - timedelta(days=fake.random_int(min=5, max=120)),
+                price=price,
+                currency=currency,
+                billing_cycle=billing_cycle,
+                status="active",
+            ))
+
+        if user_one and len(catalog_subs) >= 2:
+            ensure_user_subscription(user_one.id, subscription_id=catalog_subs[0].id, price=catalog_subs[0].default_price, currency=catalog_subs[0].default_currency)
+            ensure_user_subscription(user_one.id, subscription_id=catalog_subs[1].id, price=catalog_subs[1].default_price, currency=catalog_subs[1].default_currency)
+            ensure_user_subscription(user_one.id, custom_name="Gym Membership", price=25.0, currency="USD")
+
+        if user_two and len(catalog_subs) >= 4:
+            ensure_user_subscription(user_two.id, subscription_id=catalog_subs[2].id, price=catalog_subs[2].default_price, currency=catalog_subs[2].default_currency)
+            ensure_user_subscription(user_two.id, subscription_id=catalog_subs[3].id, price=catalog_subs[3].default_price, currency=catalog_subs[3].default_currency)
+            ensure_user_subscription(user_two.id, custom_name="Local Cinema Club", price=12.0, currency="USD")
+
+        session.commit()
+        print("✅ Seed завершено: користувачі, каталог та тестові прив'язки підписок створені.")
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":
     seed_database()
+
+

@@ -2,11 +2,12 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 
-# --- СХЕМИ КОРИСТУВАЧІВ ---
+# 1. Схема для отримання даних ВІД клієнта (при реєстрації)
 class UserCreate(BaseModel):
     email: str
     password: str
 
+# 2. Схема для відправки даних ДО клієнта (Безпечна!)
 class UserOut(BaseModel):
     id: int
     email: str
