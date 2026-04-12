@@ -1,6 +1,7 @@
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
 from currency_updater import fetch_and_save_rates
+from routers import users, catalog, currency
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -64,6 +65,7 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.include_router(users.router)
 app.include_router(catalog.router)
 app.include_router(subscriptions.router)
+app.include_router(currency.router)
 
 @app.get("/")
 def read_root():
