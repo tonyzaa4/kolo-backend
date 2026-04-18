@@ -17,6 +17,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    fcm_token = Column(String(255), nullable=True)
 
     # Відношення (Relationships) до інших таблиць
     subscriptions = relationship("UserSubscription", back_populates="owner", cascade="all, delete")
