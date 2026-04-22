@@ -11,6 +11,9 @@ from database import get_db
 router = APIRouter(prefix="/api/users", tags=["Users"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
 
+class FCMTokenUpdate(BaseModel):
+    fcm_token: str
+
 class UserPreferencesUpdate(BaseModel):
     theme: Optional[str] = None
     language: Optional[str] = None
@@ -171,3 +174,33 @@ def add_subscription(
     db.refresh(new_user_sub)
 
     return new_user_sub
+@router.get(
+    "/analytics",
+    summary="Аналітика витрат (Заглушка)",
+    description="Тимчасові Mock-дані для фронтенду, поки бекенд готує реальну логіку."
+)
+def get_analytics(current_user: models.User = Depends(get_current_user)):
+    # Це хардкод (заглушка), як і просили в SCRUM-127
+    return {
+        "total_spend": 1000, 
+        "by_category": {
+            "Music": 400, 
+            "Games": 600
+        }
+    }
+
+@router.patch(
+    "/me/fcm-token",
+    summary="Зберегти FCM токен пристрою",
+    description="Приймає Firebase Cloud Messaging токен від мобільного додатку і зберігає його для подальшої відправки пуш-сповіщень."
+)
+def update_fcm_token(
+    token_data: FCMTokenUpdate, 
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Оновлюємо токен поточного юзера
+    current_user.fcm_token = token_data.fcm_token
+    db.commit()
+    
+    return {"message": "FCM токен успішно збережено!"}

@@ -23,6 +23,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="routers\currency.py" />
     <Compile Include="routers\users.py">
       <SubType>Code</SubType>
     </Compile>

@@ -17,12 +17,13 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    fcm_token = Column(String(255), nullable=True)
+    
+    # НОВЕ ПОЛЕ:
+    fcm_token = Column(String(255), nullable=True) # Може бути порожнім, поки юзер не зайшов з телефону
 
-    # Відношення (Relationships) до інших таблиць
+    # Відношення (Relationships)
     subscriptions = relationship("UserSubscription", back_populates="owner", cascade="all, delete")
     preferences = relationship("UserPreference", back_populates="user", uselist=False, cascade="all, delete")
-
 # Таблиця базових (глобальних) підписок (напр. Netflix, Spotify)
 class Subscription(Base):
     __tablename__ = "subscriptions"
