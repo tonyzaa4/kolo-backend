@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 
 from database import engine
+from subscription_checker import check_upcoming_payments
 
 import models
 
@@ -25,11 +26,14 @@ models.Base.metadata.create_all(bind=engine)
 @app.on_event("startup")
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    
+
+    # Це твоє старе завдання для валют
     fetch_and_save_rates()
-    
     scheduler.add_job(fetch_and_save_rates, 'cron', hour=0, minute=0)
-    
+
+    # ДОДАЄМО НОВЕ ЗАВДАННЯ ДЛЯ ПУШІВ (на 9:00 ранку):
+    scheduler.add_job(check_upcoming_payments, 'cron', hour=9, minute=0)
+
     scheduler.start()
     print("⏰ Фоновий планувальник запущено! Курси валют оновлюватимуться щодня.")
 
