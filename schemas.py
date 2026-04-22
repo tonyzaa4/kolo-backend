@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
+from typing import Dict
 
 # 1. Схема для отримання даних ВІД клієнта (при реєстрації)
 class UserCreate(BaseModel):
@@ -47,3 +48,7 @@ class UserSubscriptionOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AnalyticsOut(BaseModel):
+    total_spend: float
+    by_category: Dict[str, float]
