@@ -1,7 +1,7 @@
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
 from currency_updater import fetch_and_save_rates
-from routers import users, catalog, currency
+from routers import users, catalog, currency, subscriptions
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -19,25 +19,24 @@ from app.exceptions import (
     validation_exception_handler,
 )
 
-# Запускаємо логування
 access_logger = setup_logging()
 
 models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Kolo API")
+
 @app.on_event("startup")
 def start_scheduler():
     scheduler = BackgroundScheduler()
 
-    # Це твоє старе завдання для валют
     fetch_and_save_rates()
     scheduler.add_job(fetch_and_save_rates, 'cron', hour=0, minute=0)
 
-    # ДОДАЄМО НОВЕ ЗАВДАННЯ ДЛЯ ПУШІВ (на 9:00 ранку):
     scheduler.add_job(check_upcoming_payments, 'cron', hour=9, minute=0)
 
     scheduler.start()
     print("⏰ Фоновий планувальник запущено! Курси валют оновлюватимуться щодня.")
 
-app = FastAPI(title="Kolo API")
 
 @app.middleware("http")
 async def log_catalog_requests(request: Request, call_next):
@@ -60,15 +59,13 @@ async def log_catalog_requests(request: Request, call_next):
     return response
 
 
-# Підключаємо exception handlers
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(404, not_found_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
-# Підключаємо роутери
 app.include_router(users.router)
 app.include_router(catalog.router)
-app.include_router(subscriptions.router)
+app.include_router(subscriptions.router) # Тепер тут не буде червоної помилки
 app.include_router(currency.router)
 
 @app.get("/")
