@@ -3,9 +3,7 @@ import models
 
 
 def calculate_user_analytics(db: Session, user_id: int):
-    """
-    Агрегація витрат та конвертація валют на льоту.
-    """
+
     # 1. Дістаємо всі актуальні курси валют з бази
     rates_db = db.query(models.ExchangeRate).all()
     rates = {rate.currency: rate.rate_to_uah for rate in rates_db}

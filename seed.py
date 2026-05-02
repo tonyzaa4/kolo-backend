@@ -21,7 +21,7 @@ def seed_database():
             {"email": "demo@example.com", "password": "password123"},
         ]
 
-        # 1. Створення користувачів
+        # 1. Створення базових користувачів
         for item in predefined_users:
             user = session.query(models.User).filter(models.User.email == item["email"]).first()
             if not user:
@@ -33,12 +33,21 @@ def seed_database():
                 session.flush()
             users_by_email[item["email"]] = user
 
-        while session.query(models.User).count() < 10:
-            user = models.User(
-                email=fake.unique.email(),
-                hashed_password=utils.hash_password(fake.password(length=10)),
-            )
-            session.add(user)
+        # --- ОСЬ ВИПРАВЛЕНИЙ БЛОК (Створення фейкових юзерів) ---
+        current_users_count = session.query(models.User).count()
+        users_needed = 10 - current_users_count
+
+        if users_needed > 0:
+            print(f"Додаємо {users_needed} нових користувачів...")
+            for _ in range(users_needed):
+                user = models.User(
+                    email=fake.unique.email(),
+                    hashed_password=utils.hash_password(fake.password(length=10)),
+                )
+                session.add(user)
+            # Обов'язково зберігаємо користувачів у базу!
+            session.commit()
+        # --------------------------------------------------------
 
         # 2. Створення каталогу підписок
         services = [
@@ -72,7 +81,7 @@ def seed_database():
 
         session.commit()
 
-        # 3. Ось ці змінні ти загубила минулого разу! Дістаємо дані для прив'язки
+        # 3. Дістаємо дані для прив'язки
         catalog_subs = session.query(models.Subscription).filter(models.Subscription.is_custom == False).all()
         user_one = session.query(models.User).filter(models.User.email == "testuser1@example.com").first()
         user_two = session.query(models.User).filter(models.User.email == "testuser2@example.com").first()
@@ -114,10 +123,9 @@ def seed_database():
             ensure_user_subscription(user_two.id, custom_name="Local Cinema Club", price=12.0, currency="USD")
 
         session.commit()
-        print("✅ Seed завершено: користувачі, каталог та тестові прив'язки підписок створені.")
+        print("✅ Seed завершено: користувачі, каталог та тестові прив'язки підписок успішно завантажені у базу!")
 
     finally:
-        # Тепер закриття сесії стоїть там, де треба — у самому кінці!
         session.close()
 
 
