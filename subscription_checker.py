@@ -1,14 +1,17 @@
 from datetime import date, timedelta
 from database import SessionLocal
 import models
-
-# Імпортуємо функцію Тетяни з її файлу
+import logging
 from push_service import send_push
+
+# Налаштовуємо логер для цього файлу
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def check_upcoming_payments():
     db = SessionLocal()
     try:
-        print("🔍 Запуск щоранкової перевірки підписок...")
+        logger.info("🔍 Запуск щоранкової перевірки підписок...")
         today = date.today()
         tomorrow = today + timedelta(days=1)
         
@@ -32,10 +35,10 @@ def check_upcoming_payments():
                     body = f"Завтра зніметься {sub.price} {sub.currency} за {sub.custom_name}"
                     
                     send_push(user.fcm_token, title, body)
-                    print(f"✅ Пуш відправлено на пристрій юзера {user.email}")
+                    logger.info(f"✅ Пуш відправлено на пристрій юзера {user.email}")
                     
-        print("🏁 Перевірку підписок завершено.")
+        logger.info("🏁 Перевірку підписок завершено.")
     except Exception as e:
-        print(f"❌ Помилка в кроні: {e}")
+        logger.error(f"❌ Помилка в кроні: {e}")
     finally:
         db.close()

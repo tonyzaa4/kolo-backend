@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
 import enum
 
@@ -10,7 +10,6 @@ class BillingCycle(str, enum.Enum):
     monthly = "monthly"
     yearly = "yearly"
 
-# Таблиця користувачів
 class User(Base):
     __tablename__ = "users"
 
@@ -18,13 +17,11 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     
-    # НОВЕ ПОЛЕ:
-    fcm_token = Column(String(255), nullable=True) # Може бути порожнім, поки юзер не зайшов з телефону
+    fcm_token = Column(String(255), nullable=True) 
 
-    # Відношення (Relationships)
     subscriptions = relationship("UserSubscription", back_populates="owner", cascade="all, delete")
     preferences = relationship("UserPreference", back_populates="user", uselist=False, cascade="all, delete")
-# Таблиця базових (глобальних) підписок (напр. Netflix, Spotify)
+
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
@@ -36,7 +33,6 @@ class Subscription(Base):
     default_currency = Column(String(10), default="USD")
     is_custom = Column(Boolean, default=False)
 
-# Таблиця ПІДПИСОК КОРИСТУВАЧА (його особистий портфель)
 class UserSubscription(Base):
     __tablename__ = "user_subscriptions"
 

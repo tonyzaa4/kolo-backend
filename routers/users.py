@@ -6,6 +6,7 @@ from typing import Optional
 import models
 import schemas
 import utils
+import analytics_logic
 from database import get_db
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
@@ -176,18 +177,17 @@ def add_subscription(
     return new_user_sub
 @router.get(
     "/analytics",
-    summary="Аналітика витрат (Заглушка)",
-    description="Тимчасові Mock-дані для фронтенду, поки бекенд готує реальну логіку."
+    response_model=schemas.AnalyticsOut,
+    summary="Аналітика витрат",
+    description="Повертає реальну аналітику витрат користувача на основі його підписок."
 )
-def get_analytics(current_user: models.User = Depends(get_current_user)):
-    # Це хардкод (заглушка), як і просили в SCRUM-127
-    return {
-        "total_spend": 1000, 
-        "by_category": {
-            "Music": 400, 
-            "Games": 600
-        }
-    }
+def get_analytics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    analytics_data = analytics_logic.calculate_user_analytics(current_user.id, db)
+    
+    return analytics_data
 
 @router.patch(
     "/me/fcm-token",
