@@ -14,11 +14,12 @@ from app.exceptions import (
     validation_exception_handler,
 )
 
-# Запускаємо логування
 access_logger = setup_logging()
 app = FastAPI(title="Kolo API")
 
 models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Kolo API")
 
 @app.on_event("startup")
 def start_scheduler():
@@ -30,7 +31,11 @@ def start_scheduler():
     scheduler.add_job(check_upcoming_payments, 'cron', hour=9, minute=0)
 
     scheduler.start()
+
     access_logger.info("⏰ Фоновий планувальник запущено! Курси валют оновлюватимуться щодня.")
+
+    print("⏰ Фоновий планувальник запущено! Курси валют оновлюватимуться щодня.")
+
 
 @app.middleware("http")
 async def log_catalog_requests(request: Request, call_next):
@@ -52,15 +57,14 @@ async def log_catalog_requests(request: Request, call_next):
 
     return response
 
-# Підключаємо exception handlers
+
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(404, not_found_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
-# Підключаємо роутери
 app.include_router(users.router)
 app.include_router(catalog.router)
-app.include_router(subscriptions.router)
+app.include_router(subscriptions.router) # Тепер тут не буде червоної помилки
 app.include_router(currency.router)
 
 @app.get("/")
