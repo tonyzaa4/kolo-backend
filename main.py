@@ -15,11 +15,26 @@ from app.exceptions import (
 )
 
 access_logger = setup_logging()
-app = FastAPI(title="Kolo API")
+
+# --- КРАСА ДЛЯ SWAGGER ---
+tags_metadata = [
+    {"name": "Users", "description": "Операції з користувачами: реєстрація, авторизація, налаштування профілю та аналітика."},
+    {"name": "Subscriptions", "description": "Керування особистими підписками (додавання сервісів, кастомні підписки, списки)."},
+    {"name": "Catalog", "description": "Глобальний каталог популярних підписок (пошук, фільтрація за ціною та категорією)."},
+    {"name": "Currency", "description": "Автоматично оновлювані курси валют від НБУ для точної конвертації витрат."}
+]
+
+app = FastAPI(
+    title="Kolo API 🚀",
+    description="Офіційний бекенд для мобільного додатку **Kolo - Менеджер підписок**.\n\nAPI забезпечує авторизацію, керування підписками, підрахунок аналітики витрат, фонову розсилку пуш-сповіщень та інтеграцію з курсами валют НБУ.",
+    version="1.0.0",
+    openapi_tags=tags_metadata,
+    contact={
+        "name": "Kolo Developers Team",
+    }
+)
 
 models.Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Kolo API")
 
 @app.on_event("startup")
 def start_scheduler():
@@ -33,9 +48,6 @@ def start_scheduler():
     scheduler.start()
 
     access_logger.info("⏰ Фоновий планувальник запущено! Курси валют оновлюватимуться щодня.")
-
-    print("⏰ Фоновий планувальник запущено! Курси валют оновлюватимуться щодня.")
-
 
 @app.middleware("http")
 async def log_catalog_requests(request: Request, call_next):
@@ -57,16 +69,15 @@ async def log_catalog_requests(request: Request, call_next):
 
     return response
 
-
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(404, not_found_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 app.include_router(users.router)
+app.include_router(subscriptions.router)
 app.include_router(catalog.router)
-app.include_router(subscriptions.router) # Тепер тут не буде червоної помилки
 app.include_router(currency.router)
 
-@app.get("/")
+@app.get("/", tags=["Healthcheck"], summary="Перевірка статусу сервера")
 def read_root():
-    return {"message": "Kolo API is running. Бекенд успішно запущено!"}
+    return {"message": "Kolo API is running. Бекенд успішно запущено!"} 

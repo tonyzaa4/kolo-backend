@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-
 import models
 import schemas
 from database import get_db
@@ -9,14 +8,22 @@ from routers.users import get_current_user
 
 router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions"])
 
-
-@router.get("/", response_model=List[schemas.SubscriptionOut], summary="Отримати каталог підписок")
+@router.get(
+    "/", 
+    response_model=List[schemas.SubscriptionOut], 
+    summary="Отримати базові підписки",
+    description="Повертає список всіх підписок, які доступні в системі за замовчуванням (is_custom = False)."
+)
 def get_all_subscriptions(db: Session = Depends(get_db)):
     subscriptions = db.query(models.Subscription).filter(models.Subscription.is_custom == False).all()
     return subscriptions
 
-
-@router.get("/my", response_model=List[schemas.UserSubscriptionOut], summary="Отримати підписки поточного користувача")
+@router.get(
+    "/my", 
+    response_model=List[schemas.UserSubscriptionOut], 
+    summary="Отримати підписки поточного користувача",
+    description="Віддає масив усіх підписок, які додав собі авторизований користувач, відсортованих за ID."
+)
 def get_my_subscriptions(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -28,8 +35,13 @@ def get_my_subscriptions(
         .all()
     )
 
-
-@router.post("/", response_model=schemas.UserSubscriptionOut, status_code=status.HTTP_201_CREATED, summary="Додати підписку користувачу")
+@router.post(
+    "/", 
+    response_model=schemas.UserSubscriptionOut, 
+    status_code=status.HTTP_201_CREATED, 
+    summary="Створити/додати підписку користувачу",
+    description="Прив'язує підписку до користувача. Можна передати `subscription_id` для сервісу з каталогу, або `custom_name` для створення власної унікальної підписки."
+)
 def create_user_subscription(
     payload: schemas.UserSubscriptionCreate,
     db: Session = Depends(get_db),

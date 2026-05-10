@@ -1,7 +1,6 @@
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 # Імпортуємо модулі для роботи з БД
 import models
 from database import get_db
@@ -13,7 +12,7 @@ router = APIRouter(prefix="/api/catalog", tags=["Catalog"])
 @router.get(
     "/",
     summary="Отримати каталог з пошуком та фільтрацією",
-    description="Повертає список підписок. Дозволяє шукати за назвою (`search`) та категорією (`category`). **Тільки для авторизованих.**"
+    description="Повертає загальний список сервісів. Дозволяє шукати за назвою (`search`) та фільтрувати за категорією (`category`). **Вимагає авторизації.**"
 )
 def get_catalog(
     search: Optional[str] = None,
@@ -30,12 +29,11 @@ def get_catalog(
 
     return query.all()
 
-
-# --- Ендпоінт 2: Фільтрація за ціною (SCRUM-33 + фікс default_price) ---
+# --- Ендпоінт 2: Фільтрація за ціною (SCRUM-33) ---
 @router.get(
     "/price-range",
     summary="Отримати підписки за діапазоном цін",
-    description="Повертає список підписок у заданому діапазоні цін (`min_price` - `max_price`). **Тільки для авторизованих.**"
+    description="Повертає список підписок у заданому діапазоні цін (`min_price` - `max_price`). **Вимагає авторизації.**"
 )
 def get_subscriptions_by_price(
     min_price: Optional[float] = None,
@@ -54,12 +52,11 @@ def get_subscriptions_by_price(
 
     return query.all()
 
-
 # --- Ендпоінт 3: Деталі однієї підписки (SCRUM-99) ---
 @router.get(
     "/{subscription_id}",
     summary="Отримати деталі підписки за ID",
-    description="Повертає всю інформацію про одну конкретну підписку за її ID. Потрібно для екрану деталей в Android. **Тільки для авторизованих.**"
+    description="Повертає всю детальну інформацію про конкретний сервіс з каталогу за його ID. Використовується для екрану деталей в Android. **Вимагає авторизації.**"
 )
 def get_subscription_by_id(
     subscription_id: int,
